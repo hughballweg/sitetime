@@ -11,10 +11,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Unpack project
-        run: unzip -q sitetime-project.zip -d src
+      - name: Find and unpack project
+        run: |
+          echo "Files in repo:"; find . -path ./.git -prune -o -type f -print
+          if [ -f settings.gradle.kts ]; then
+            echo "Project files are uploaded directly (not zipped)."
+            mkdir src && find . -mindepth 1 -maxdepth 1 ! -name .git ! -name src -exec cp -r {} src/ \;
+          else
+            ZIP=$(find . -path ./.git -prune -o -type f -iname 'sitetime*.zip' -print | sort | tail -n 1)
+            [ -z "$ZIP" ] && ZIP=$(find . -path ./.git -prune -o -type f -iname '*.zip' -print | sort | tail -n 1)
+            if [ -z "$ZIP" ]; then
+              echo "::error::No project zip found. Upload sitetime-project.zip to the repo."
+              exit 1
+            fi
+            echo "Using $ZIP"
+            unzip -q "$ZIP" -d src
+            # If the zip contains a top-level folder, step into it
+            if [ ! -f src/settings.gradle.kts ]; then
+              INNER=$(dirname "$(find src -name settings.gradle.kts | head -n 1)")
+              [ -z "$INNER" ] && { echo "::error::settings.gradle.kts not found in $ZIP"; exit 1; }
+              mv src src_tmp && mv "src_tmp/${INNER#src/}" src
+            fi
+          fi
 
       - uses: actions/setup-java@v4
         with:
