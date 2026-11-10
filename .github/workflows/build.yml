@@ -28,7 +28,6 @@ jobs:
             fi
             echo "Using $ZIP"
             unzip -q "$ZIP" -d src
-            # If the zip contains a top-level folder, step into it
             if [ ! -f src/settings.gradle.kts ]; then
               INNER=$(dirname "$(find src -name settings.gradle.kts | head -n 1)")
               [ -z "$INNER" ] && { echo "::error::settings.gradle.kts not found in $ZIP"; exit 1; }
